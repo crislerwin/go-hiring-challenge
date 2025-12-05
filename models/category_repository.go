@@ -1,8 +1,10 @@
 package models
 
 import (
+	"errors"
 	"strings"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"gorm.io/gorm"
 )
 
@@ -40,8 +42,9 @@ func (r *CategoriesRepository) CreateCategory(category *Category) error {
 
 	// Attempt to create
 	if err := r.db.Create(category).Error; err != nil {
-		// Check for duplicate key constraint violation
-		if strings.Contains(err.Error(), "duplicate") || strings.Contains(err.Error(), "unique constraint") {
+		// Check for PostgreSQL unique violation error (code 23505)
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
 			return ErrCategoryCodeExists
 		}
 		return err

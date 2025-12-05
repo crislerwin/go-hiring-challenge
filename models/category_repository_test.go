@@ -54,7 +54,7 @@ func TestCreateCategory(t *testing.T) {
 		assert.Equal(t, "Electronics", found.Name)
 	})
 
-	t.Run("fails when creating duplicate category code", func(t *testing.T) {
+	t.Run("returns ErrCategoryCodeExists for duplicate code", func(t *testing.T) {
 		duplicateCategory := &Category{
 			Code: "CLOTHING", // Already exists
 			Name: "Duplicate Clothing",
@@ -62,6 +62,34 @@ func TestCreateCategory(t *testing.T) {
 
 		err := repo.CreateCategory(duplicateCategory)
 
-		assert.Error(t, err, "Should error on duplicate code")
+		assert.ErrorIs(t, err, ErrCategoryCodeExists)
+	})
+
+	t.Run("returns ErrInvalidCategory for nil category", func(t *testing.T) {
+		err := repo.CreateCategory(nil)
+
+		assert.ErrorIs(t, err, ErrInvalidCategory)
+	})
+
+	t.Run("returns ErrInvalidCategory for empty code", func(t *testing.T) {
+		invalidCategory := &Category{
+			Code: "",
+			Name: "Invalid",
+		}
+
+		err := repo.CreateCategory(invalidCategory)
+
+		assert.ErrorIs(t, err, ErrInvalidCategory)
+	})
+
+	t.Run("returns ErrInvalidCategory for empty name", func(t *testing.T) {
+		invalidCategory := &Category{
+			Code: "VALID",
+			Name: "",
+		}
+
+		err := repo.CreateCategory(invalidCategory)
+
+		assert.ErrorIs(t, err, ErrInvalidCategory)
 	})
 }

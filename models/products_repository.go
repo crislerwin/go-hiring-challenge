@@ -1,6 +1,8 @@
 package models
 
 import (
+	"errors"
+
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
@@ -32,6 +34,11 @@ func NewProductsRepository(db *gorm.DB) *ProductsRepository {
 
 // GetAllProducts retrieves products with pagination
 func (r *ProductsRepository) GetAllProducts(offset, limit int) ([]Product, int64, error) {
+	// Validate pagination parameters
+	if offset < 0 || limit <= 0 {
+		return nil, 0, ErrInvalidPagination
+	}
+
 	var products []Product
 	var total int64
 
@@ -55,6 +62,9 @@ func (r *ProductsRepository) GetProductByCode(code string) (*Product, error) {
 	var product Product
 	if err := r.db.Preload("Category").Preload("Variants").
 		Where("code = ?", code).First(&product).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrProductNotFound
+		}
 		return nil, err
 	}
 	return &product, nil
@@ -62,6 +72,11 @@ func (r *ProductsRepository) GetProductByCode(code string) (*Product, error) {
 
 // GetProductsWithFilters retrieves products with filtering and pagination
 func (r *ProductsRepository) GetProductsWithFilters(filters ProductFilters) ([]Product, int64, error) {
+	// Validate pagination parameters
+	if filters.Offset < 0 || filters.Limit <= 0 {
+		return nil, 0, ErrInvalidPagination
+	}
+
 	var products []Product
 	var total int64
 

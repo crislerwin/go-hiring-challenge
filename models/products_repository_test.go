@@ -1,31 +1,10 @@
 package models
 
 import (
-	"os"
 	"testing"
 
-	"github.com/mytheresa/go-hiring-challenge/app/database"
 	"github.com/stretchr/testify/assert"
-	"gorm.io/gorm"
 )
-
-func setupTestDB(t *testing.T) *gorm.DB {
-	// Use actual PostgreSQL from .env
-	user := getEnv("POSTGRES_USER", "postgres")
-	password := getEnv("POSTGRES_PASSWORD", "password")
-	dbname := getEnv("POSTGRES_DB", "challenge")
-	port := getEnv("POSTGRES_PORT", "5432")
-
-	db, _ := database.New(user, password, dbname, port)
-	return db
-}
-
-func getEnv(key, fallback string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return fallback
-}
 
 func TestGetAllProducts_WithPagination(t *testing.T) {
 	db := setupTestDB(t)

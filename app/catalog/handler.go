@@ -27,7 +27,8 @@ func NewCatalogHandler(r *models.ProductsRepository) *CatalogHandler {
 }
 
 func (h *CatalogHandler) HandleGet(w http.ResponseWriter, r *http.Request) {
-	res, err := h.repo.GetAllProducts()
+	// todo: Update with query params
+	res, _, err := h.repo.GetAllProducts(0, 100)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

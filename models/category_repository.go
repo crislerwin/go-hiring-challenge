@@ -1,6 +1,10 @@
 package models
 
-import "gorm.io/gorm"
+import (
+	"strings"
+
+	"gorm.io/gorm"
+)
 
 // CategoryRepository defines the interface for category data access
 type CategoryRepository interface {
@@ -25,5 +29,23 @@ func (r *CategoriesRepository) GetAllCategories() ([]Category, error) {
 }
 
 func (r *CategoriesRepository) CreateCategory(category *Category) error {
-	return r.db.Create(category).Error
+	// Validate input
+	if category == nil {
+		return ErrInvalidCategory
+	}
+
+	if strings.TrimSpace(category.Code) == "" || strings.TrimSpace(category.Name) == "" {
+		return ErrInvalidCategory
+	}
+
+	// Attempt to create
+	if err := r.db.Create(category).Error; err != nil {
+		// Check for duplicate key constraint violation
+		if strings.Contains(err.Error(), "duplicate") || strings.Contains(err.Error(), "unique constraint") {
+			return ErrCategoryCodeExists
+		}
+		return err
+	}
+
+	return nil
 }

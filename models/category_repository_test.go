@@ -33,6 +33,10 @@ func TestCreateCategory(t *testing.T) {
 	repo := NewCategoriesRepository(db)
 
 	t.Run("creates a new category successfully", func(t *testing.T) {
+		// Clean up before and after test
+		db.Where("code = ?", "ELECTRONICS").Delete(&Category{})
+		cleanupCategory(t, db, "ELECTRONICS")
+
 		newCategory := &Category{
 			Code: "ELECTRONICS",
 			Name: "Electronics",

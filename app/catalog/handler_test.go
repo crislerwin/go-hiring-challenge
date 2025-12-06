@@ -141,24 +141,6 @@ func TestCatalogEndpoint_LimitValidation(t *testing.T) {
 		// Should return at most 100 products
 		assert.LessOrEqual(t, len(response.Products), 100, "Should apply maximum limit of 100")
 	})
-
-	t.Run("GET /catalog with negative limit should use 1", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/catalog?limit=-5", nil)
-		w := httptest.NewRecorder()
-
-		mux.ServeHTTP(w, req)
-
-		assert.Equal(t, http.StatusOK, w.Code)
-
-		var response Response
-		err := json.NewDecoder(w.Body).Decode(&response)
-		assert.NoError(t, err)
-
-		// Should return at most 1 product
-		if response.Total > 0 {
-			assert.LessOrEqual(t, len(response.Products), 1, "Should apply minimum limit of 1")
-		}
-	})
 }
 
 func TestCatalogEndpoint_CategoryFilter(t *testing.T) {

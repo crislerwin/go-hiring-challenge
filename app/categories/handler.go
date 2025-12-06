@@ -81,6 +81,8 @@ func (h *CategoriesHandler) HandleCreate(w http.ResponseWriter, r *http.Request)
 		Name: category.Name,
 	}
 
+	// Return 201 Created with JSON response
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	api.OKResponse(w, response)
+	json.NewEncoder(w).Encode(response)
 }

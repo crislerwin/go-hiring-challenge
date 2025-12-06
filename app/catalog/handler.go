@@ -1,6 +1,7 @@
 package catalog
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -134,8 +135,13 @@ func (h *CatalogHandler) HandleGetDetails(w http.ResponseWriter, r *http.Request
 	// Fetch product by code from repository
 	product, err := h.repo.GetProductByCode(code)
 	if err != nil {
-		// Product not found
-		api.ErrorResponse(w, http.StatusNotFound, "Product not found")
+		// Check if it's a "not found" error
+		if errors.Is(err, models.ErrProductNotFound) {
+			api.ErrorResponse(w, http.StatusNotFound, "Product not found")
+			return
+		}
+		// Other errors are internal server errors
+		api.ErrorResponse(w, http.StatusInternalServerError, "Internal server error")
 		return
 	}
 

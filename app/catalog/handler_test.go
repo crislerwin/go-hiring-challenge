@@ -20,6 +20,7 @@ func setupTestServer() (*http.ServeMux, *gorm.DB) {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /catalog", handler.HandleGet)
+	mux.HandleFunc("GET /catalog/{code}", handler.HandleGetDetails)
 
 	return mux, db
 }
@@ -320,5 +321,87 @@ func TestCatalogEndpoint_ResponseFormat(t *testing.T) {
 			assert.NotEmpty(t, product.Category.Code, "Product should have category code")
 			assert.NotEmpty(t, product.Category.Name, "Product should have category name")
 		}
+	})
+}
+
+// Product Details Endpoint Tests
+
+func TestProductDetailsEndpoint_Success(t *testing.T) {
+	mux, _ := setupTestServer()
+
+	t.Run("GET /catalog/{code} returns product details", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/catalog/PROD001", nil)
+		req.SetPathValue("code", "PROD001")
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		assert.Equal(t, "application/json", w.Header().Get("Content-Type"))
+
+		var response ProductDetailsResponse
+		err := json.NewDecoder(w.Body).Decode(&response)
+		assert.NoError(t, err)
+
+		// Verify product data
+		assert.Equal(t, "PROD001", response.Code)
+		assert.Greater(t, response.Price, 0.0, "Product should have price")
+
+		// Verify category
+		assert.NotEmpty(t, response.Category.Code, "Product should have category code")
+		assert.NotEmpty(t, response.Category.Name, "Product should have category name")
+
+		// Verify variants exist
+		assert.Greater(t, len(response.Variants), 0, "Product should have variants")
+
+		// Verify variant structure
+		for _, variant := range response.Variants {
+			assert.NotEmpty(t, variant.Name, "Variant should have name")
+			assert.NotEmpty(t, variant.SKU, "Variant should have SKU")
+			assert.Greater(t, variant.Price, 0.0, "Variant should have price")
+		}
+	})
+}
+
+func TestProductDetailsEndpoint_NotFound(t *testing.T) {
+	mux, _ := setupTestServer()
+
+	t.Run("GET /catalog/{code} returns 404 for non-existent product", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/catalog/INVALID_CODE", nil)
+		req.SetPathValue("code", "INVALID_CODE")
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusNotFound, w.Code)
+		assert.Equal(t, "application/json", w.Header().Get("Content-Type"))
+
+		var errorResponse map[string]string
+		err := json.NewDecoder(w.Body).Decode(&errorResponse)
+		assert.NoError(t, err)
+		assert.Contains(t, errorResponse["error"], "not found", "Error message should indicate product not found")
+	})
+}
+
+func TestProductDetailsEndpoint_CategoryIncluded(t *testing.T) {
+	mux, _ := setupTestServer()
+
+	t.Run("product details include category information", func(t *testing.T) {
+		// Test with PROD002 which should be in SHOES category
+		req := httptest.NewRequest(http.MethodGet, "/catalog/PROD002", nil)
+		req.SetPathValue("code", "PROD002")
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		var response ProductDetailsResponse
+		err := json.NewDecoder(w.Body).Decode(&response)
+		assert.NoError(t, err)
+
+		// Verify category is present and populated
+		assert.Equal(t, "SHOES", response.Category.Code, "Product should be in SHOES category")
+		assert.Equal(t, "Shoes", response.Category.Name, "Category name should be Shoes")
 	})
 }

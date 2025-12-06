@@ -5,22 +5,16 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 
-	"github.com/mytheresa/go-hiring-challenge/app/database"
+	"github.com/mytheresa/go-hiring-challenge/internal/testutil"
 	"github.com/mytheresa/go-hiring-challenge/models"
 	"github.com/stretchr/testify/assert"
 	"gorm.io/gorm"
 )
 
 func setupTestServer(t *testing.T) (*http.ServeMux, *gorm.DB) {
-	user := getEnv("POSTGRES_USER", "postgres")
-	password := getEnv("POSTGRES_PASSWORD", "password")
-	dbname := getEnv("POSTGRES_DB", "challenge")
-	port := getEnv("POSTGRES_PORT", "5432")
-
-	db, _ := database.New(user, password, dbname, port)
+	db := testutil.SetupTestDB()
 
 	repo := models.NewCategoriesRepository(db)
 	handler := NewCategoriesHandler(repo)
@@ -30,13 +24,6 @@ func setupTestServer(t *testing.T) (*http.ServeMux, *gorm.DB) {
 	mux.HandleFunc("POST /categories", handler.HandleCreate)
 
 	return mux, db
-}
-
-func getEnv(key, fallback string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return fallback
 }
 
 func TestCategoriesEndpoint_List(t *testing.T) {

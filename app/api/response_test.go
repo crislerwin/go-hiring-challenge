@@ -28,6 +28,27 @@ func TestOKResponse(t *testing.T) {
 	})
 }
 
+func TestCreatedResponse(t *testing.T) {
+
+	type sampleResponse struct {
+		ID   int    `json:"id"`
+		Name string `json:"name"`
+	}
+
+	sample := sampleResponse{ID: 1, Name: "Created Item"}
+
+	t.Run("successful http201 json response", func(t *testing.T) {
+		recorder := httptest.NewRecorder()
+		CreatedResponse(recorder, sample)
+
+		assert.Equal(t, http.StatusCreated, recorder.Code, "Expected status code 201 Created")
+		assert.Equal(t, "application/json", recorder.Header().Get("Content-Type"), "Expected Content-Type to be application/json")
+
+		expected := `{"id":1,"name":"Created Item"}`
+		assert.JSONEq(t, expected, recorder.Body.String(), "Response body does not match expected")
+	})
+}
+
 func TestErrorResponse(t *testing.T) {
 	t.Run("json response for a given http status code", func(t *testing.T) {
 		recorder := httptest.NewRecorder()

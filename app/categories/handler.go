@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/mytheresa/go-hiring-challenge/app/api"
 	"github.com/mytheresa/go-hiring-challenge/models"
@@ -55,6 +56,22 @@ func (h *CategoriesHandler) HandleCreate(w http.ResponseWriter, r *http.Request)
 	// Validate required fields
 	if req.Code == "" || req.Name == "" {
 		api.ErrorResponse(w, http.StatusBadRequest, "Code and name are required")
+		return
+	}
+
+	// Validate non-whitespace
+	if strings.TrimSpace(req.Code) == "" || strings.TrimSpace(req.Name) == "" {
+		api.ErrorResponse(w, http.StatusBadRequest, "Code and name cannot be empty or whitespace only")
+		return
+	}
+
+	// Validate max length (code: 50 chars, name: 255 chars)
+	if len(req.Code) > 50 {
+		api.ErrorResponse(w, http.StatusBadRequest, "Code too long: maximum 50 characters")
+		return
+	}
+	if len(req.Name) > 255 {
+		api.ErrorResponse(w, http.StatusBadRequest, "Name too long: maximum 255 characters")
 		return
 	}
 

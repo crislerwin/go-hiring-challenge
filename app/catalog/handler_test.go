@@ -243,6 +243,34 @@ func TestCatalogEndpoint_PriceFilter(t *testing.T) {
 		// Should return empty or very few products
 		assert.Equal(t, 0, len(response.Products), "Should return no products under $1")
 	})
+
+	t.Run("GET /catalog with invalid priceLessThan format", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/catalog?priceLessThan=invalid", nil)
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+
+		var errorResponse map[string]string
+		err := json.NewDecoder(w.Body).Decode(&errorResponse)
+		assert.NoError(t, err)
+		assert.Contains(t, errorResponse["error"], "priceLessThan", "Error message should mention priceLessThan")
+	})
+
+	t.Run("GET /catalog with negative priceLessThan", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/catalog?priceLessThan=-10.00", nil)
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+
+		var errorResponse map[string]string
+		err := json.NewDecoder(w.Body).Decode(&errorResponse)
+		assert.NoError(t, err)
+		assert.Contains(t, errorResponse["error"], "priceLessThan", "Error message should mention priceLessThan")
+	})
 }
 
 func TestCatalogEndpoint_CombinedFilters(t *testing.T) {

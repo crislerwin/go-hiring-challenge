@@ -154,22 +154,33 @@ func (h *CatalogHandler) HandleGetDetails(w http.ResponseWriter, r *http.Request
 	// Extract product code from URL path parameter
 	code := r.PathValue("code")
 	if code == "" {
+		slog.Warn("Product code missing in request")
 		api.ErrorResponse(w, http.StatusBadRequest, "Product code is required")
 		return
 	}
+
+	slog.Info("Fetching product details", "code", code)
 
 	// Fetch product by code from repository
 	product, err := h.repo.GetProductByCode(code)
 	if err != nil {
 		// Check if it's a "not found" error
 		if errors.Is(err, models.ErrProductNotFound) {
+			slog.Warn("Product not found", "code", code)
 			api.ErrorResponse(w, http.StatusNotFound, "Product not found")
 			return
 		}
 		// Other errors are internal server errors
+		slog.Error("Failed to fetch product details",
+			"code", code,
+			"error", err)
 		api.ErrorResponse(w, http.StatusInternalServerError, "Internal server error")
 		return
 	}
+
+	slog.Info("Successfully fetched product details",
+		"code", code,
+		"variantCount", len(product.Variants))
 
 	// Map to response with variant price inheritance
 	response := mapProductDetailsResponse(product)

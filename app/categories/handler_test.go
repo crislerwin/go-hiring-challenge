@@ -156,4 +156,94 @@ func TestCategoriesEndpoint_Create(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Contains(t, errorResponse["error"], "already exists")
 	})
+
+	t.Run("POST /categories returns 400 for whitespace-only code", func(t *testing.T) {
+		requestBody := CreateCategoryRequest{
+			Code: "   ",
+			Name: "Test",
+		}
+
+		body, _ := json.Marshal(requestBody)
+		req := httptest.NewRequest(http.MethodPost, "/categories", bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+
+		var errorResponse map[string]string
+		err := json.NewDecoder(w.Body).Decode(&errorResponse)
+		assert.NoError(t, err)
+		assert.Contains(t, errorResponse["error"], "empty")
+	})
+
+	t.Run("POST /categories returns 400 for whitespace-only name", func(t *testing.T) {
+		requestBody := CreateCategoryRequest{
+			Code: "TEST",
+			Name: "   ",
+		}
+
+		body, _ := json.Marshal(requestBody)
+		req := httptest.NewRequest(http.MethodPost, "/categories", bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+
+		var errorResponse map[string]string
+		err := json.NewDecoder(w.Body).Decode(&errorResponse)
+		assert.NoError(t, err)
+		assert.Contains(t, errorResponse["error"], "empty")
+	})
+
+	t.Run("POST /categories returns 400 for code too long", func(t *testing.T) {
+		requestBody := CreateCategoryRequest{
+			Code: "THIS_IS_A_VERY_LONG_CODE_THAT_EXCEEDS_THE_MAXIMUM_LENGTH_ALLOWED_FOR_CATEGORY_CODES",
+			Name: "Test",
+		}
+
+		body, _ := json.Marshal(requestBody)
+		req := httptest.NewRequest(http.MethodPost, "/categories", bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+
+		var errorResponse map[string]string
+		err := json.NewDecoder(w.Body).Decode(&errorResponse)
+		assert.NoError(t, err)
+		assert.Contains(t, errorResponse["error"], "too long")
+	})
+
+	t.Run("POST /categories returns 400 for name too long", func(t *testing.T) {
+		// Create a string longer than 255 characters
+		longName := ""
+		for i := 0; i < 260; i++ {
+			longName += "a"
+		}
+
+		requestBody := CreateCategoryRequest{
+			Code: "TEST",
+			Name: longName,
+		}
+
+		body, _ := json.Marshal(requestBody)
+		req := httptest.NewRequest(http.MethodPost, "/categories", bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+
+		var errorResponse map[string]string
+		err := json.NewDecoder(w.Body).Decode(&errorResponse)
+		assert.NoError(t, err)
+		assert.Contains(t, errorResponse["error"], "too long")
+	})
 }

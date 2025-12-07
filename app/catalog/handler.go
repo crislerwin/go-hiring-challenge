@@ -2,6 +2,7 @@ package catalog
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 	"strconv"
 
@@ -70,10 +71,15 @@ func (h *CatalogHandler) HandleGet(w http.ResponseWriter, r *http.Request) {
 	if priceStr := r.URL.Query().Get("priceLessThan"); priceStr != "" {
 		price, err := decimal.NewFromString(priceStr)
 		if err != nil {
+			slog.Warn("Invalid priceLessThan parameter",
+				"error", err,
+				"value", priceStr)
 			api.ErrorResponse(w, http.StatusBadRequest, "Invalid priceLessThan format: must be a valid number")
 			return
 		}
 		if price.IsNegative() {
+			slog.Warn("Negative priceLessThan parameter",
+				"value", price)
 			api.ErrorResponse(w, http.StatusBadRequest, "Invalid priceLessThan: must be a positive number")
 			return
 		}
@@ -88,12 +94,25 @@ func (h *CatalogHandler) HandleGet(w http.ResponseWriter, r *http.Request) {
 		PriceLessThan: priceLessThan,
 	}
 
+	slog.Info("Fetching catalog products",
+		"offset", offset,
+		"limit", limit,
+		"category", categoryCode,
+		"priceLessThan", priceLessThan)
+
 	// Fetch products with filters
 	products, total, err := h.repo.GetProductsWithFilters(filters)
 	if err != nil {
+		slog.Error("Failed to fetch products",
+			"error", err,
+			"filters", filters)
 		api.ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+
+	slog.Info("Successfully fetched catalog products",
+		"count", len(products),
+		"total", total)
 
 	// Map response
 	response := mapProductsResponse(products, total)

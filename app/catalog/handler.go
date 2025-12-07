@@ -68,9 +68,16 @@ func (h *CatalogHandler) HandleGet(w http.ResponseWriter, r *http.Request) {
 	categoryCode := r.URL.Query().Get("category")
 	var priceLessThan *decimal.Decimal
 	if priceStr := r.URL.Query().Get("priceLessThan"); priceStr != "" {
-		if price, err := decimal.NewFromString(priceStr); err == nil {
-			priceLessThan = &price
+		price, err := decimal.NewFromString(priceStr)
+		if err != nil {
+			api.ErrorResponse(w, http.StatusBadRequest, "Invalid priceLessThan format: must be a valid number")
+			return
 		}
+		if price.IsNegative() {
+			api.ErrorResponse(w, http.StatusBadRequest, "Invalid priceLessThan: must be a positive number")
+			return
+		}
+		priceLessThan = &price
 	}
 
 	// Build filters

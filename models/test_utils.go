@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/mytheresa/go-hiring-challenge/app/database"
+	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
 
@@ -39,4 +40,13 @@ func cleanupProduct(t *testing.T, db *gorm.DB, code string) {
 	t.Cleanup(func() {
 		db.Where("code = ?", code).Delete(&Product{})
 	})
+}
+
+// mustDecimal creates a decimal from string, panics on error (for test fixtures)
+func mustDecimal(s string) decimal.Decimal {
+	d, err := decimal.NewFromString(s)
+	if err != nil {
+		panic(err)
+	}
+	return d
 }

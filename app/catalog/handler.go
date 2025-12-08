@@ -2,6 +2,7 @@ package catalog
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 	"strconv"
 
@@ -68,9 +69,21 @@ func (h *CatalogHandler) HandleGet(w http.ResponseWriter, r *http.Request) {
 	categoryCode := r.URL.Query().Get("category")
 	var priceLessThan *decimal.Decimal
 	if priceStr := r.URL.Query().Get("priceLessThan"); priceStr != "" {
-		if price, err := decimal.NewFromString(priceStr); err == nil {
-			priceLessThan = &price
+		price, err := decimal.NewFromString(priceStr)
+		if err != nil {
+			slog.Warn("Invalid priceLessThan parameter",
+				"error", err,
+				"value", priceStr)
+			api.ErrorResponse(w, http.StatusBadRequest, "Invalid priceLessThan format: must be a valid number")
+			return
 		}
+		if price.IsNegative() {
+			slog.Warn("Negative priceLessThan parameter",
+				"value", price)
+			api.ErrorResponse(w, http.StatusBadRequest, "Invalid priceLessThan: must be a positive number")
+			return
+		}
+		priceLessThan = &price
 	}
 
 	// Build filters
@@ -81,12 +94,25 @@ func (h *CatalogHandler) HandleGet(w http.ResponseWriter, r *http.Request) {
 		PriceLessThan: priceLessThan,
 	}
 
+	slog.Info("Fetching catalog products",
+		"offset", offset,
+		"limit", limit,
+		"category", categoryCode,
+		"priceLessThan", priceLessThan)
+
 	// Fetch products with filters
 	products, total, err := h.repo.GetProductsWithFilters(filters)
 	if err != nil {
+		slog.Error("Failed to fetch products",
+			"error", err,
+			"filters", filters)
 		api.ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+
+	slog.Info("Successfully fetched catalog products",
+		"count", len(products),
+		"total", total)
 
 	// Map response
 	response := mapProductsResponse(products, total)
@@ -128,22 +154,33 @@ func (h *CatalogHandler) HandleGetDetails(w http.ResponseWriter, r *http.Request
 	// Extract product code from URL path parameter
 	code := r.PathValue("code")
 	if code == "" {
+		slog.Warn("Product code missing in request")
 		api.ErrorResponse(w, http.StatusBadRequest, "Product code is required")
 		return
 	}
+
+	slog.Info("Fetching product details", "code", code)
 
 	// Fetch product by code from repository
 	product, err := h.repo.GetProductByCode(code)
 	if err != nil {
 		// Check if it's a "not found" error
 		if errors.Is(err, models.ErrProductNotFound) {
+			slog.Warn("Product not found", "code", code)
 			api.ErrorResponse(w, http.StatusNotFound, "Product not found")
 			return
 		}
 		// Other errors are internal server errors
+		slog.Error("Failed to fetch product details",
+			"code", code,
+			"error", err)
 		api.ErrorResponse(w, http.StatusInternalServerError, "Internal server error")
 		return
 	}
+
+	slog.Info("Successfully fetched product details",
+		"code", code,
+		"variantCount", len(product.Variants))
 
 	// Map to response with variant price inheritance
 	response := mapProductDetailsResponse(product)
